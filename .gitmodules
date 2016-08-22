@@ -1,0 +1,18 @@
+[submodule "lwip/lwip"]
+	path = lwip/lwip
+	url = https://github.com/SuperHouse/esp-lwip.git
+[submodule "extras/mbedtls/mbedtls"]
+	path = extras/mbedtls/mbedtls
+	url = https://github.com/ARMmbed/mbedtls.git
+[submodule "extras/jsmn/jsmn"]
+	path = extras/jsmn/jsmn
+	url = https://github.com/zserge/jsmn.git
+[submodule "bootloader/rboot"]
+	path = bootloader/rboot
+	url = https://github.com/raburton/rboot.git
+[submodule "extras/spiffs/spiffs"]
+	path = extras/spiffs/spiffs
+	url = https://github.com/pellepl/spiffs.git
+[submodule "examples/posix_fs/fs-test"]
+	path = examples/posix_fs/fs-test
+	url = https://github.com/sheinz/fs-test
