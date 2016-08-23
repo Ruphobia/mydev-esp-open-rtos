@@ -59,7 +59,6 @@ bool ICACHE_FLASH_ATTR rboot_set_config(rboot_config *conf) {
 	uint8 *buffer;
 	buffer = (uint8*)os_malloc(SECTOR_SIZE);
 	if (!buffer) {
-		//os_printf("No ram!\r\n");
 		return false;
 	}
 	
@@ -348,7 +347,7 @@ bool rboot_verify_image(uint32_t initial_offset, uint32_t *image_length, const c
     if(error_message)
         *error_message = error;
     if(error) {
-        printf("%s: %s\n", __func__, error);
+
     }
     if(image_length)
         *image_length = offset - initial_offset;

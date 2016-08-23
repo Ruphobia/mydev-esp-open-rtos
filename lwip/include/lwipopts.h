@@ -457,4 +457,9 @@
  */
 #define DHCP_DEBUG                      LWIP_DBG_OFF
 
+/**
+ * NAT_DEBUG: Enable debugging in nat.c.
+ */
+#define NAT_DEBUG                  LWIP_DBG_OFF
+
 #endif /* __LWIPOPTS_H__ */

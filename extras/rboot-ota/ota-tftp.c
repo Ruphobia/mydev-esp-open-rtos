@@ -112,10 +112,8 @@ err_t ota_tftp_download(const char *server, int port, const char *filename,
 static void tftp_task(void *listen_port)
 {
     struct netconn *nc = netconn_new (NETCONN_UDP);
-    if(!nc) {
-        printf("OTA TFTP: Failed to allocate socket.\r\n");
-        return;
-    }
+    if(!nc)
+    	return;
 
     netconn_bind(nc, IP_ADDR_ANY, (int)listen_port);
 
@@ -128,19 +126,19 @@ static void tftp_task(void *listen_port)
         struct netbuf *netbuf;
         err_t err = netconn_recv(nc, &netbuf);
         if(err != ERR_OK) {
-            printf("OTA TFTP Error: Failed to receive TFTP initial packet. err=%d\r\n", err);
+
             continue;
         }
         uint16_t len = netbuf_len(netbuf);
         if(len < 6) {
-            printf("OTA TFTP Error: Packet too short for a valid WRQ\r\n");
+
             netbuf_delete(netbuf);
             continue;
         }
 
         uint16_t opcode = netbuf_read_u16_n(netbuf, 0);
         if(opcode != TFTP_OP_WRQ) {
-            printf("OTA TFTP Error: Invalid opcode 0x%04x didn't match WRQ\r\n", opcode);
+
             netbuf_delete(netbuf);
             continue;
         }
@@ -183,7 +181,7 @@ static void tftp_task(void *listen_port)
         /* ACK the WRQ */
         int ack_err = tftp_send_ack(nc, 0);
         if(ack_err != 0) {
-            printf("OTA TFTP initial ACK failed\r\n");
+
             netconn_disconnect(nc);
             continue;
         }
@@ -194,12 +192,12 @@ static void tftp_task(void *listen_port)
         int recv_err = tftp_receive_data(nc, conf.roms[slot], conf.roms[slot]+MAX_IMAGE_SIZE, &received_len, NULL, 0, NULL);
 
         netconn_disconnect(nc);
-        printf("OTA TFTP receive data result %d bytes %d\r\n", recv_err, received_len);
+
         if(recv_err == ERR_OK) {
-            printf("OTA TFTP result valid. Changing slot to %d\r\n", slot);
+
             vPortEnterCritical();
             if(!rboot_set_current_rom(slot)) {
-                printf("OTA TFTP failed to set new rboot slot\r\n");
+
             }
             sdk_system_restart();
         }
@@ -380,7 +378,7 @@ static err_t tftp_receive_data(struct netconn *nc, size_t write_offs, size_t lim
 
         err_t ack_err = tftp_send_ack(nc, block);
         if(ack_err != ERR_OK) {
-            printf("OTA TFTP failed to send ACK.\r\n");
+
             return ack_err;
         }
 
@@ -412,7 +410,6 @@ static err_t tftp_send_ack(struct netconn *nc, int block)
 
 static void tftp_send_error(struct netconn *nc, int err_code, const char *err_msg)
 {
-    printf("OTA TFTP Error: %s\r\n", err_msg);
     struct netbuf *err = netbuf_new();
     uint16_t *err_buf = (uint16_t *)netbuf_alloc(err, 4+strlen(err_msg)+1);
     err_buf[0] = htons(TFTP_OP_ERROR);
