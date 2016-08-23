@@ -48,6 +48,13 @@ static err_t tftp_send_ack(struct netconn *nc, int block);
 static err_t tftp_send_rrq(struct netconn *nc, const char *filename);
 static void tftp_send_error(struct netconn *nc, int err_code, const char *err_msg);
 
+int (*verify_cb)(int) = NULL;
+
+void ota_tftp_set_verify_callback(tftp_verify_cb incoming_verify_cb)
+{
+    verify_cb = incoming_verify_cb;
+}
+
 void ota_tftp_init_server(int listen_port)
 {
     xTaskCreate(tftp_task, (signed char *)"tftpOTATask", 512, (void *)listen_port, 2, NULL);
@@ -194,12 +201,22 @@ static void tftp_task(void *listen_port)
         netconn_disconnect(nc);
 
         if(recv_err == ERR_OK) {
+            bool reboot = true;
 
-            vPortEnterCritical();
-            if(!rboot_set_current_rom(slot)) {
-
+            // Use the verify callback if available
+            if(verify_cb) {
+                if(verify_cb(slot) != 0) {
+                    reboot = false;
+                }
             }
-            sdk_system_restart();
+
+            if(reboot) {
+                vPortEnterCritical();
+                if(!rboot_set_current_rom(slot)) {
+
+                }
+                sdk_system_restart();
+            }
         }
     }
 }
