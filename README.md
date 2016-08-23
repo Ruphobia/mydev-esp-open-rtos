@@ -4,15 +4,15 @@ pulled from (https://github.com/SuperHouse/esp-open-rtos)
 
 Changes:
 
-Silent serial port :
+1) Silent serial port :
 
 Continuing effort to silence the serial port so it can be use for other things. 
 
-NAT Functions:
+2) NAT Functions:
 
 Using AP+Station mode you can talk to other devices kinda of like a simplistic router.
 
-Secondary OTA verify:
+3) Secondary OTA verify:
 
 Allows you to add additional verification to your OTA update image. 
 
