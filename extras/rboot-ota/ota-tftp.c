@@ -205,7 +205,7 @@ static void tftp_task(void *listen_port)
 
             // Use the verify callback if available
             if(verify_cb) {
-                if(verify_cb(slot) != 0) {
+                if(verify_cb(slot) == false) {
                     reboot = false;
                 }
             }
