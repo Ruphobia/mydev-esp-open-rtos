@@ -212,6 +212,25 @@ bool i2c_slave_write(uint8_t slave_addr, uint8_t *data, uint8_t len)
     return success;
 }
 
+bool i2c_slave_word_write(uint16_t slave_addr, uint16_t regID, uint8_t *data, uint8_t len)
+{
+    bool success = false;
+    do {
+        i2c_start();
+        if (!i2c_write((slave_addr << 1) & 0xFE))
+            break;
+        i2c_write(regID >> 8);
+        i2c_write(regID & 0x00FF);
+        while (len--) {
+            if (!i2c_write(*data++))
+                break;
+        }
+        i2c_stop();
+        success = true;
+    } while(0);
+    return success;
+}
+
 bool i2c_slave_read(uint8_t slave_addr, uint8_t data, uint8_t *buf, uint32_t len)
 {
     bool success = false;
@@ -221,6 +240,35 @@ bool i2c_slave_read(uint8_t slave_addr, uint8_t data, uint8_t *buf, uint32_t len
             break;
         }
         i2c_write(data);
+        i2c_stop();
+        i2c_start();
+        if (!i2c_write(slave_addr << 1 | 1)) { // Slave address + read
+            break;
+        }
+        while(len) {
+            *buf = i2c_read(len == 1);
+            buf++;
+            len--;
+        }
+        success = true;
+    } while(0);
+    i2c_stop();
+    if (!success) {
+        printf("I2C: write error\n");
+    }
+    return success;
+}
+
+bool i2c_slave_word_read(uint8_t slave_addr, uint16_t data, uint8_t *buf, uint32_t len)
+{
+    bool success = false;
+    do {
+        i2c_start();
+        if (!i2c_write(slave_addr << 1)) {
+            break;
+        }
+        i2c_write(data >> 8);
+        i2c_write(data & 0x00FF);
         i2c_stop();
         i2c_start();
         if (!i2c_write(slave_addr << 1 | 1)) { // Slave address + read
