@@ -27,7 +27,7 @@ FIRMWARE_DIR ?= $(PROGRAM_DIR)firmware/
 ESPTOOL ?= esptool.py
 # serial port settings for esptool.py
 ESPPORT ?= /dev/ttyUSB0
-ESPBAUD ?= 115200
+ESPBAUD ?= 1500000
 
 # firmware tool arguments
 ESPTOOL_ARGS=-fs $(FLASH_SIZE)m -fm $(FLASH_MODE) -ff $(FLASH_SPEED)m
