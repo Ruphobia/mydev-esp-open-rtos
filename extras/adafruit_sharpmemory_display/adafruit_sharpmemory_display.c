@@ -33,7 +33,9 @@ int SPI_CS_GPIO_NUM;
 
 uint8_t sharpmem_buffer[(SHARPMEM_LCDWIDTH * SHARPMEM_LCDHEIGHT) / 8];
 static const uint8_t set[] = {  1,  2,  4,  8,  16,  32,  64,  128 };
-static const uint8_t clr[] = { ~1, ~2, ~4, ~8, ~16, ~32, ~64, ~128 };
+//fixed compiler warning {  ~1,  ~2,  ~4,  ~8,  ~16,  ~32,  ~64,  ~128 }
+//gcc doesn't like ~128 in an unsigned 8 bit var for some reason
+static const uint8_t clr[] = { 254, 253, 251, 247, 239, 223, 191, 127 };
 int rotation = 0;
 
 
@@ -153,7 +155,7 @@ void Adafruit_Sharpmemory_Display_refresh(void)
 	sys_mutex_lock(pSPIMutex);
 
 	//TODO: fiddle with parameters to make this work
-	spi_init(1, 3, 6250000, true, true, true);
+	spi_init(1, 3, SPI_FREQ_DIV_500K, true, true, true);
 
 	Adafruit_Sharpmemory_Display_ChipSelect(1);//Set LCD chip select to enable
 
@@ -256,8 +258,8 @@ void Adafruit_Sharpmemory_Display_drawChar(int16_t x, int16_t y, unsigned char c
 
 void Adafruit_Sharpmemory_Display_fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 {
-  for (int16_t i=x; i<x+w; i++)
-	  Adafruit_Sharpmemory_Display_drawFastVLine(i, y, h, color);
+	for (int16_t i=x; i<x+w; i++)
+		Adafruit_Sharpmemory_Display_drawFastVLine(i, y, h, color);
 }
 
 void Adafruit_Sharpmemory_Display_drawFastVLine(int16_t x, int16_t y,int16_t h, uint16_t color)
@@ -268,49 +270,50 @@ void Adafruit_Sharpmemory_Display_drawFastVLine(int16_t x, int16_t y,int16_t h, 
 // Bresenham's algorithm - thx wikpedia
 void Adafruit_Sharpmemory_Display_drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color)
 {
-  int16_t steep = abs(y1 - y0) > abs(x1 - x0);
-  if (steep)
-  {
-    _swap_int16_t(x0, y0);
-    _swap_int16_t(x1, y1);
-  }
+	int16_t steep = abs(y1 - y0) > abs(x1 - x0);
+	if (steep)
+	{
+		_swap_int16_t(x0, y0);
+		_swap_int16_t(x1, y1);
+	}
 
-  if (x0 > x1)
-  {
-    _swap_int16_t(x0, x1);
-    _swap_int16_t(y0, y1);
-  }
+	if (x0 > x1)
+	{
+		_swap_int16_t(x0, x1);
+		_swap_int16_t(y0, y1);
+	}
 
-  int16_t dx, dy;
-  dx = x1 - x0;
-  dy = abs(y1 - y0);
+	int16_t dx, dy;
+	dx = x1 - x0;
+	dy = abs(y1 - y0);
 
-  int16_t err = dx / 2;
-  int16_t ystep;
+	int16_t err = dx / 2;
+	int16_t ystep;
 
-  if (y0 < y1)
-  {
-    ystep = 1;
-  } else
-  {
-    ystep = -1;
-  }
+	if (y0 < y1)
+	{
+		ystep = 1;
+	}
+	else
+	{
+		ystep = -1;
+	}
 
-  for (; x0<=x1; x0++)
-  {
-    if (steep)
-    {
-    	Adafruit_Sharpmemory_Display_drawPixel(y0, x0, color);
-    } else
-    {
-    	Adafruit_Sharpmemory_Display_drawPixel(x0, y0, color);
-    }
-    err -= dy;
-    if (err < 0)
-    {
-      y0 += ystep;
-      err += dx;
-    }
-  }
+	for (; x0<=x1; x0++)
+	{
+		if (steep)
+		{
+			Adafruit_Sharpmemory_Display_drawPixel(y0, x0, color);
+		} else
+		{
+			Adafruit_Sharpmemory_Display_drawPixel(x0, y0, color);
+		}
+		err -= dy;
+		if (err < 0)
+		{
+			y0 += ystep;
+			err += dx;
+		}
+	}
 }
 
