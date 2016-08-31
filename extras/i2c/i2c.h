@@ -45,6 +45,10 @@ bool i2c_slave_write(uint8_t slave_addr, uint8_t *buf, uint8_t len);
 // from slave into 'buf'. Return true if slave acked.
 bool i2c_slave_read(uint8_t slave_addr, uint8_t data, uint8_t *buf, uint32_t len);
 
+bool i2c_slave_word_read(uint8_t slave_addr, uint16_t data, uint8_t *buf, uint32_t len);
+
+bool i2c_slave_word_write(uint16_t slave_addr, uint16_t regID, uint8_t *data, uint8_t len);
+
 // Send start and stop conditions. Only needed when implementing protocols for
 // devices where the i2c_slave_[read|write] functions above are of no use.
 void i2c_start(void);

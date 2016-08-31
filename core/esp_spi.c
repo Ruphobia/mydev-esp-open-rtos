@@ -199,6 +199,52 @@ static void _spi_buf_transfer(uint8_t bus, const void *out_data, void *in_data,
     }
 }
 
+void spi_transfer_bytes_(uint8_t bus, uint8_t* in, uint8_t size)
+{
+    _wait(bus);
+    size_t bytes = size; // size * (uint8_t)8;
+    _set_size(bus, bytes);
+
+    uint8_t dataSize = 0;
+
+    spi_set_endianness(1, SPI_LITTLE_ENDIAN);
+
+    volatile uint32_t* fifoPtr = (volatile uint32_t*)(&SPI(bus).W[0]);
+    dataSize = ((size + 3) / 4);
+
+    while(dataSize--) {
+        *fifoPtr = 0xFFFFFFFF;
+        fifoPtr++;
+    }
+
+    _start(bus);
+    _wait(bus);
+
+    volatile uint8_t* fifoPtr8 = (volatile uint8_t*)(&SPI(bus).W[0]);
+    dataSize = size;
+    while(dataSize--) {
+        *in = *fifoPtr8;
+        in++;
+        fifoPtr8++;
+    }
+
+    spi_set_endianness(1, SPI_BIG_ENDIAN);
+}
+
+void spi_transfer_bytes(uint8_t bus, uint8_t * in, uint32_t size)
+{
+    while(size) {
+        if(size > 64) {
+            spi_transfer_bytes_(1, in, 64);
+            size -= 64;
+            in += 64;
+        } else {
+            spi_transfer_bytes_(1, in, size);
+            size = 0;
+        }
+    }
+}
+
 uint8_t spi_transfer_8(uint8_t bus, uint8_t data)
 {
     uint8_t res;

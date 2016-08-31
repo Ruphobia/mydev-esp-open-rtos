@@ -265,6 +265,8 @@ uint32_t spi_transfer_32(uint8_t bus, uint32_t data);
  */
 size_t spi_transfer(uint8_t bus, const void *out_data, void *in_data, size_t len, spi_word_size_t word_size);
 
+void spi_transfer_bytes(uint8_t bus, uint8_t * in, uint32_t size);
+
 #ifdef __cplusplus
 }
 #endif
