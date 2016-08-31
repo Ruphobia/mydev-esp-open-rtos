@@ -16,5 +16,11 @@ Using AP+Station mode you can talk to other devices kinda of like a simplistic r
 
 Allows you to add additional verification to your OTA update image. 
 
+4) Fixes / upgrades (UPGRADDE) to core/spi functions
+
+5) Adadruit Sharp Memory Display Driver (WIP)
+
+
+
 
 
