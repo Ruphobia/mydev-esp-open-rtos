@@ -26,7 +26,7 @@
 #define _SPI0_FUNC IOMUX_FUNC(1)
 #define _SPI1_FUNC IOMUX_FUNC(2)
 
-#define _SPI_BUF_SIZE 64
+#define _SPI_BUF_SIZE 160
 
 static bool _minimal_pins[2] = {false, false};
 

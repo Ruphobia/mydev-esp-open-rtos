@@ -6,6 +6,10 @@
 #include <esp/spi.h>
 #include <lwip/sys.h>
 
+
+#define VOSPI_FRAME_SIZE (164)
+
+
 #ifndef _USEGPIO_16_
 #define _USEGPIO_16_
 #define ESP8266_REG(addr) *((volatile uint32_t *)(0x60000000+(addr)))
@@ -32,7 +36,9 @@
 #define GP16FFS(f) (((f) & 0x03) | (((f) & 0x04) << 4))
 #endif
 
+typedef uint32_t FLIRBuffer[41][61];
+
 void FLIR_Lipton_Init(int SPI_CS_GPIO, sys_mutex_t *mMutex);
-void FLIR_Lipton_CaptureImage(uint16_t *ImageBuffer);
+void FLIR_Lipton_CaptureImage(FLIRBuffer ImageBuffer);
 
 #endif
