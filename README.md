@@ -20,6 +20,8 @@ Allows you to add additional verification to your OTA update image.
 
 5) Adadruit Sharp Memory Display Driver (WIP)
 
+6) FLIR Lipton thermal imager driver (WIP)
+
 
 
 
