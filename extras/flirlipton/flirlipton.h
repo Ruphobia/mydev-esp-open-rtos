@@ -6,6 +6,10 @@
 #include <esp/spi.h>
 #include <lwip/sys.h>
 
+#define ADDRESS (0x2A)
+#define SYS (0x02)
+#define GET (0x00)
+
 
 #define VOSPI_FRAME_SIZE (164)
 

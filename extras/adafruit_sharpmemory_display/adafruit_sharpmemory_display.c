@@ -28,8 +28,12 @@ All text above, and the splash screen must be included in any redistribution
 
 #include "adafruit_sharpmemory_display.h"
 
+#define GPIO_SPI_MISO	(12)
+#define GPIO_SPI_MOSI 	(13)
+#define GPIO_SPI_CLK 	(14)
+
 sys_mutex_t *pSPIMutex;
-int SPI_CS_GPIO_NUM;
+int DISPLAY_SPI_CS_GPIO_NUM;
 
 uint8_t sharpmem_buffer[(SHARPMEM_LCDWIDTH * SHARPMEM_LCDHEIGHT) / 8];
 static const uint8_t set[] = {  1,  2,  4,  8,  16,  32,  64,  128 };
@@ -38,6 +42,72 @@ static const uint8_t set[] = {  1,  2,  4,  8,  16,  32,  64,  128 };
 static const uint8_t clr[] = { 254, 253, 251, 247, 239, 223, 191, 127 };
 int rotation = 0;
 
+void Display_SendByte(uint8_t data)
+{
+	uint8_t i = 0;
+
+	// LCD expects LSB first
+	for (i=0; i<8; i++)
+	{
+		// Make sure clock starts low
+		//digitalWrite(_clk, LOW);
+		gpio_write(14,0);
+
+		if (data & 0x80)
+			//digitalWrite(_mosi, HIGH);
+			gpio_write(13,1);
+		else
+			//digitalWrite(_mosi, LOW);
+			gpio_write(13,0);
+
+		// Clock is active high
+		//digitalWrite(_clk, HIGH);
+		gpio_write(14,1);
+		data <<= 1;
+	}
+	// Make sure clock ends low
+	//digitalWrite(_clk, LOW);
+	gpio_write(14,0);
+}
+
+void Display_sendbyteLSB(uint8_t data)
+{
+	uint8_t i = 0;
+
+	// LCD expects LSB first
+	for (i=0; i<8; i++)
+	{
+		// Make sure clock starts low
+		//digitalWrite(_clk, LOW);
+		gpio_write(14,0);
+		if (data & 0x01)
+			//digitalWrite(_mosi, HIGH);
+			gpio_write(13,1);
+		else
+			//digitalWrite(_mosi, LOW);
+			gpio_write(13,0);
+		// Clock is active high
+		//digitalWrite(_clk, HIGH);
+		gpio_write(14,1);
+		data >>= 1;
+	}
+	// Make sure clock ends low
+	//digitalWrite(_clk, LOW);
+	gpio_write(14,0);
+}
+
+void setupbitbang()
+{
+    gpio_set_iomux_function(12, IOMUX_GPIO12_FUNC_GPIO);
+    gpio_set_iomux_function(13, IOMUX_GPIO13_FUNC_GPIO);
+    gpio_set_iomux_function(14, IOMUX_GPIO14_FUNC_GPIO);
+
+	gpio_enable(GPIO_SPI_CLK, GPIO_OUTPUT);
+	gpio_write(GPIO_SPI_CLK,0);
+	gpio_enable(GPIO_SPI_MOSI, GPIO_OUTPUT);
+	gpio_enable(GPIO_SPI_MISO, GPIO_INPUT);
+	printf("Set Bitbang\n");
+}
 
 void Adafruit_Sharpmemory_Display_Setrotation(int value)
 {
@@ -95,6 +165,17 @@ uint8_t Adafruit_Sharpmemory_Display_getPixel(uint16_t x, uint16_t y)
 	return sharpmem_buffer[(y*SHARPMEM_LCDWIDTH + x) / 8] & set[x & 7] ? 1 : 0;
 }
 
+void Display_Clear()
+{
+	memset(sharpmem_buffer, 0xff, (SHARPMEM_LCDWIDTH * SHARPMEM_LCDHEIGHT) / 8);
+	// Send the clear screen command rather than doing a HW refresh (quicker)
+
+	Display_SendByte(_sharpmem_vcom | SHARPMEM_BIT_CLEAR);
+	Display_sendbyteLSB(0x00);
+	TOGGLE_VCOM;
+	printf("Display Clear\n");
+}
+
 void Adafruit_Sharpmemory_Display_Clear()
 {
 	//make sure we have a valid mutex
@@ -102,21 +183,17 @@ void Adafruit_Sharpmemory_Display_Clear()
 	if(pSPIMutex == NULL)
 		return;
 
-	//clear display buffer
-	memset(sharpmem_buffer, 0xff, (SHARPMEM_LCDWIDTH * SHARPMEM_LCDHEIGHT) / 8);
-
 	//get a lock on the SPI bus
 	//so the camera doesn't boink the display
 	//during the update
 	sys_mutex_lock(pSPIMutex);
 
+	setupbitbang();
 	// Send the clear screen command rather than doing a HW refresh (quicker)
 	Adafruit_Sharpmemory_Display_ChipSelect(1);
 
-	spi_transfer_8(1, _sharpmem_vcom | SHARPMEM_BIT_CLEAR);
-	spi_transfer_8(1, 0x00);
+	Display_Clear();
 
-	TOGGLE_VCOM;
 	Adafruit_Sharpmemory_Display_ChipSelect(0);
 
 	//unlock the SPI bus so the
@@ -126,17 +203,52 @@ void Adafruit_Sharpmemory_Display_Clear()
 
 void Adafruit_Sharpmemory_Display_ChipSelect(bool Value)
 {
-	if (SPI_CS_GPIO_NUM != 16)
+	if (DISPLAY_SPI_CS_GPIO_NUM != 16)
 	{
-		gpio_write(SPI_CS_GPIO_NUM,Value);
+		gpio_write(DISPLAY_SPI_CS_GPIO_NUM,Value);
 	}
 	else
 	{
+		printf("GPio16\n");
 		if(Value == 1)
 			GP16O |= 1; // Set GPIO_16
 		else
 			GP16O &= ~1; // clear GPIO_16a
 	}
+}
+
+void Display_refresh(void)
+{
+	uint16_t i, totalbytes, currentline, oldline;
+	totalbytes = (SHARPMEM_LCDWIDTH * SHARPMEM_LCDHEIGHT) / 8;
+
+	// Send the write command
+	Display_SendByte(SHARPMEM_BIT_WRITECMD | _sharpmem_vcom);
+	TOGGLE_VCOM;
+
+	// Send the address for line 1
+	oldline = currentline = 1;
+	Display_sendbyteLSB(currentline);
+
+	// Send image buffer
+	for (i=0; i<totalbytes; i++)
+	{
+		Display_sendbyteLSB(sharpmem_buffer[i]);
+		currentline = ((i+1)/(SHARPMEM_LCDWIDTH/8)) + 1;
+		if(currentline != oldline)
+		{
+			// Send end of line and address bytes
+			Display_sendbyteLSB(0x00);
+			if (currentline <= SHARPMEM_LCDHEIGHT)
+			{
+				Display_sendbyteLSB(currentline);
+			}
+			oldline = currentline;
+		}
+	}
+
+	// Send another trailing 8 bits for the last line
+	Display_sendbyteLSB(0x00);
 }
 
 void Adafruit_Sharpmemory_Display_refresh(void)
@@ -146,49 +258,16 @@ void Adafruit_Sharpmemory_Display_refresh(void)
 	if(pSPIMutex == NULL)
 		return;
 
-	uint16_t i, totalbytes, currentline, oldline;
-	totalbytes = (SHARPMEM_LCDWIDTH * SHARPMEM_LCDHEIGHT) / 8;
-
 	//get a lock on the SPI bus
 	//so the camera doesn't boink the display
 	//during the update
 	sys_mutex_lock(pSPIMutex);
 
-	//TODO: fiddle with parameters to make this work
-	spi_init(1, 3, SPI_FREQ_DIV_500K, true, true, true);
-
+	setupbitbang();
 	Adafruit_Sharpmemory_Display_ChipSelect(1);//Set LCD chip select to enable
 
-	spi_transfer_8(1, SHARPMEM_BIT_WRITECMD | _sharpmem_vcom);
+	Display_refresh();
 
-	TOGGLE_VCOM;
-
-	// Send the address for line 1
-	oldline = currentline = 1;
-
-	spi_transfer_8(1, currentline);
-
-	// Send image buffer
-	// we should look into sending all the
-	// data at once using spi_transfer
-	for (i=0; i<totalbytes; i++)
-	{
-		spi_transfer_8(1,sharpmem_buffer[i]);
-		currentline = ((i+1)/(SHARPMEM_LCDWIDTH/8)) + 1;
-		if(currentline != oldline)
-		{
-			// Send end of line and address bytes
-			spi_transfer_8(1,0x00);
-			if (currentline <= SHARPMEM_LCDHEIGHT)
-			{
-				spi_transfer_8(1,currentline);
-			}
-			oldline = currentline;
-		}
-	}
-
-	// Send another trailing 8 bits for the last line
-	spi_transfer_8(1,0x00);
 	Adafruit_Sharpmemory_Display_ChipSelect(0);
 
 	//unlock the SPI bus so the
@@ -201,7 +280,7 @@ void Adafruit_Sharpmemory_Display_Init(int SPI_CS_GPIO, sys_mutex_t *mMutex)
 	if(mMutex == NULL)
 		return;//we must have a mutex here
 
-	SPI_CS_GPIO_NUM = SPI_CS_GPIO;
+	DISPLAY_SPI_CS_GPIO_NUM = SPI_CS_GPIO;
 	pSPIMutex = mMutex;
 
 	if (SPI_CS_GPIO == 16)

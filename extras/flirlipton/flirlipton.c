@@ -1,13 +1,13 @@
 #include "flirlipton.h"
 
 sys_mutex_t *pSPIMutex;
-int SPI_CS_GPIO_NUM;
-
+int FLIR_SPI_CS_GPIO_NUM;
 
 void FLIR_Lipton_CaptureImage(FLIRBuffer ImageBuffer)
 {
 	//lock the SPI port
 	sys_mutex_lock(pSPIMutex);
+
 	FLIR_Lipton_ChipSelect(1);//chip disabled
 	//setup up the spi port
 	spi_init(1, SPI_MODE3, SPI_FREQ_DIV_20M, true, SPI_BIG_ENDIAN, true);
@@ -87,20 +87,16 @@ void FLIR_Lipton_CaptureImage(FLIRBuffer ImageBuffer)
 			}
 
 
-		if (done == false)
-			printf("Image Capture Failed\n");
-
 	}
-	sys_mutex_unlock(pSPIMutex);
 
-	printf("Camera Done\n");
+	sys_mutex_unlock(pSPIMutex);
 }
 
 void FLIR_Lipton_ChipSelect(bool Value)
 {
-	if (SPI_CS_GPIO_NUM != 16)
+	if (FLIR_SPI_CS_GPIO_NUM != 16)
 	{
-		gpio_write(SPI_CS_GPIO_NUM,Value);
+		gpio_write(FLIR_SPI_CS_GPIO_NUM,Value);
 	}
 	else
 	{
@@ -117,7 +113,7 @@ void FLIR_Lipton_Init(int SPI_CS_GPIO, sys_mutex_t *mMutex)
 	if(mMutex == NULL)
 		return;//we must have a mutex here
 
-	SPI_CS_GPIO_NUM = SPI_CS_GPIO;
+	FLIR_SPI_CS_GPIO_NUM = SPI_CS_GPIO;
 	pSPIMutex = mMutex;
 
 	if (SPI_CS_GPIO == 16)
@@ -126,7 +122,9 @@ void FLIR_Lipton_Init(int SPI_CS_GPIO, sys_mutex_t *mMutex)
 		GPF16 = GP16FFS(GPFFS_GPIO(16));//Set mode to GPIO
 		GPC16 = 0;//?
 		GP16E |= 1;//enable gpio 16
+		printf("camera16\n");
 	}
 
 	FLIR_Lipton_ChipSelect(1);//disable FLIR chip select
+
 }
